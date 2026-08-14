@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIC Follow-Up Random Draw</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Arial,Helvetica,sans-serif;
+    background:linear-gradient(135deg,#eef3ff,#f8f9fc);
+    color:#1f2937;min-height:100vh;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 50px}
+  h1{margin:0;font-size:32px;color:#244a91}
+  .subtitle{margin:7px 0 24px;color:#64748b}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:20px}
+  .card{
+    background:white;border-radius:16px;padding:20px;
+    box-shadow:0 8px 30px rgba(31,41,55,.08);
+  }
+  .card h2{font-size:18px;margin:0 0 14px;color:#244a91}
+  .members{display:grid;gap:9px}
+  .member{display:flex;align-items:center;gap:9px}
+  .num{
+    width:28px;height:28px;border-radius:50%;background:#dce6f7;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;
+  }
+  input{
+    width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;
+    font-size:14px;outline:none;
+  }
+  input:focus{border-color:#4472c4;box-shadow:0 0 0 3px #4472c422}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  button{
+    border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer;
+    font-size:14px;transition:.15s;
+  }
+  button:hover{transform:translateY(-1px)}
+  .primary{background:#4472c4;color:white}
+  .secondary{background:#e8eef9;color:#244a91}
+  .danger{background:#fee2e2;color:#991b1b}
+  .hero{
+    min-height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:linear-gradient(135deg,#f7f9ff,#edf2fb);
+    border-radius:14px;padding:25px;
+  }
+  .round-label{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;font-weight:700}
+  .draw-name{font-size:38px;font-weight:800;color:#244a91;margin:12px 0 4px}
+  .draw-pic{font-size:20px;font-weight:600;min-height:28px}
+  .result-wrap{margin-top:20px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#4472c4;color:white;text-align:left;padding:10px}
+  td{padding:10px;border-bottom:1px solid #e2e8f0}
+  tr.bonus td{background:#fff7d6}
+  .badge{display:inline-block;padding:4px 8px;border-radius:20px;font-size:12px;font-weight:700}
+  .std{background:#e2f0d9;color:#3f6212}
+  .bonus{background:#fff2cc;color:#92400e}
+  .summary{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:14px}
+  .sum{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-align:center}
+  .sum strong{display:block;font-size:20px;color:#244a91}
+  .note{font-size:12px;color:#64748b;line-height:1.5;margin-top:12px}
+  .flash{animation:flash .35s ease}
+  @keyframes flash{50%{transform:scale(1.03)}}
+  @media(max-width:800px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎲 PIC Follow-Up Random Draw</h1>
+  <div class="subtitle">24 Division / Branch × 7 PIC Analysts — fair, random, and presentation-friendly.</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>👥 PIC Analysts</h2>
+      <div class="members" id="members"></div>
+      <div class="controls">
+        <button class="primary" onclick="draw()">🎲 DRAW NOW</button>
+        <button class="secondary" onclick="shufflePreview()">🔀 Shuffle</button>
+        <button class="danger" onclick="resetAll()">↺ Reset</button>
+      </div>
+      <div class="note">
+        Rule: everyone gets 3 assignments. After that, 3 randomly selected analysts receive 1 additional BONUS assignment.
+        Every draw re-randomizes both PIC order and analyst order.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hero" id="hero">
+        <div class="round-label">Ready?</div>
+        <div class="draw-name">Let's Draw!</div>
+        <div class="draw-pic">Press the button to generate the allocation.</div>
+      </div>
+
+      <div class="result-wrap">
+        <h2>📋 Final Allocation</h2>
+        <table>
+          <thead><tr><th>#</th><th>PIC Analyst</th><th>Division / Branch</th><th>Type</th></tr></thead>
+          <tbody id="results"></tbody>
+        </table>
+        <div class="summary" id="summary"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const pics = [
+"FS TRD JKT","FS DIA JKT","FS FF JKT","FS QSR JKT",
+"Balikpapan","Banjarmasin","Banyuwangi","Batam","Cimahi","Cirebon",
+"Denpasar","Lampung","Lombok","Makassar","Malang","Manado","Medan",
+"Padang","Palembang","Pekanbaru","Pontianak","Semarang","Surabaya","Yogyakarta"
+];
+
+const defaultMembers = ["Member 1","Member 2","Member 3","Member 4","Member 5","Member 6","Member 7"];
+
+function renderInputs(){
+  const box=document.getElementById("members");
+  box.innerHTML="";
+  defaultMembers.forEach((m,i)=>{
+    const div=document.createElement("div"); div.className="member";
+    div.innerHTML=`<div class="num">${i+1}</div><input id="m${i}" value="${m}" placeholder="Nama PIC Analyst ${i+1}">`;
+    box.appendChild(div);
+  });
+}
+function getMembers(){return defaultMembers.map((_,i)=>document.getElementById("m"+i).value.trim()||("Member "+(i+1)));}
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
+
+function draw(){
+  const members=shuffle(getMembers());
+  const shuffledPics=shuffle(pics);
+  const assignments=[];
+  for(let i=0;i<24;i++){
+    assignments.push({
+      n:i+1,
+      member:members[i%7],
+      pic:shuffledPics[i],
+      type:i>=21?"BONUS":"Standard"
+    });
+  }
+  render(assignments);
+  animateReveal(assignments);
+}
+
+function render(assignments){
+  const tbody=document.getElementById("results");
+  tbody.innerHTML=assignments.map(x=>`
+    <tr class="${x.type==='BONUS'?'bonus':''}">
+      <td>${x.n}</td><td><strong>${x.member}</strong></td><td>${x.pic}</td>
+      <td><span class="badge ${x.type==='BONUS'?'bonus':'std'}">${x.type==='BONUS'?'🎁 BONUS':'Standard'}</span></td>
+    </tr>`).join("");
+
+  const counts={}; assignments.forEach(x=>counts[x.member]=(counts[x.member]||0)+1);
+  document.getElementById("summary").innerHTML=Object.entries(counts).map(([name,n])=>
+    `<div class="sum"><span>${name}</span><strong>${n}</strong><small>PIC</small></div>`
+  ).join("");
+}
+
+function animateReveal(assignments){
+  const hero=document.getElementById("hero");
+  let i=0;
+  const interval=setInterval(()=>{
+    const x=assignments[i];
+    hero.classList.remove("flash"); void hero.offsetWidth; hero.classList.add("flash");
+    hero.innerHTML=`<div class="round-label">${x.type==='BONUS'?'🎁 BONUS ROUND':'Assignment '+x.n+' of 24'}</div>
+      <div class="draw-name">${x.member}</div><div class="draw-pic">→ ${x.pic}</div>`;
+    i++;
+    if(i>=assignments.length){
+      clearInterval(interval);
+      setTimeout(()=>hero.innerHTML=`<div class="round-label">🎉 DRAW COMPLETE</div>
+        <div class="draw-name">24 PIC Assigned!</div><div class="draw-pic">3 members received a bonus assignment.</div>`,350);
+    }
+  },70);
+}
+
+function shufflePreview(){
+  const fakeMembers=shuffle(getMembers());
+  const fakePics=shuffle(pics);
+  const rows=Array.from({length:24},(_,i)=>({n:i+1,member:fakeMembers[i%7],pic:fakePics[i],type:i>=21?"BONUS":"Standard"}));
+  render(rows);
+  document.getElementById("hero").innerHTML=`<div class="round-label">PREVIEW</div><div class="draw-name">🔀 Shuffled</div><div class="draw-pic">Press DRAW NOW for the reveal animation.</div>`;
+}
+function resetAll(){
+  renderInputs();
+  document.getElementById("results").innerHTML="";
+  document.getElementById("summary").innerHTML="";
+  document.getElementById("hero").innerHTML=`<div class="round-label">Ready?</div><div class="draw-name">Let's Draw!</div><div class="draw-pic">Press the button to generate the allocation.</div>`;
+}
+renderInputs();
+</script>
+</body>
+</html>
